@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Video;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class VideoController extends Controller
 {
@@ -29,7 +30,21 @@ class VideoController extends Controller
      */
     public function store(Request $request)
     {
-        $video = Video::create($request->all());
+        $validatedData = $request->validate([
+            'title' => 'required',
+            'description' => 'nullable',
+            'video' => 'required|file|mimetypes:video/mp4,video/avi,video/mov',
+            
+        ]);
+        //dd($request->file('video'));
+        $videoPath = $request->file('video')->store('videos', 'public');
+        $video = Video::create([
+            'title' => $validatedData['title'],
+            'description' => $validatedData['description'] ?? null,
+            'video_path' => $videoPath,
+            'user_id' => 8,
+        ]);
+        
         return response()->json($video, 201);
     }
 
@@ -39,7 +54,12 @@ class VideoController extends Controller
     public function show(string $id)
     {
         $video = Video::findOrFail($id);
-        return response()->json($video);
+        $videoUrl = Storage::url($video->video_path);
+
+        return response()->json([
+            'video' => $video,
+            'video_url' => $videoUrl,
+        ]);
     }
 
     /**
@@ -58,7 +78,6 @@ class VideoController extends Controller
         $video = Video::findOrFail($id);
         $video->update($request->all());
         return response()->json($video);
-
     }
 
     /**
